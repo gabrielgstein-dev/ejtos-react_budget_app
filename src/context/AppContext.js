@@ -1,5 +1,24 @@
 import React, { createContext, useReducer } from 'react';
 
+export const CURRENCY_CONSTANT = {
+    DOLLAR: {
+        symbol: '$',
+        label: 'Dollar'
+    },
+    POUND: {
+        symbol: '£',
+        label: 'Pound'
+    },
+    EURO: {
+        symbol: '€',
+        label: 'Euro'
+    },
+    RUPPEE: {
+        symbol: '₹',
+        label: 'Ruppee'
+    },
+}
+
 // 5. The reducer - this is used to update the state, based on the action
 export const AppReducer = (state, action) => {
     let budget = 0;
@@ -30,33 +49,33 @@ export const AppReducer = (state, action) => {
                     ...state
                 }
             }
-            case 'RED_EXPENSE':
-                const red_expenses = state.expenses.map((currentExp)=> {
-                    if (currentExp.name === action.payload.name && currentExp.cost - action.payload.cost >= 0) {
-                        currentExp.cost =  currentExp.cost - action.payload.cost;
-                        budget = state.budget + action.payload.cost
-                    }
-                    return currentExp
-                })
-                action.type = "DONE";
-                return {
-                    ...state,
-                    expenses: [...red_expenses],
-                };
-            case 'DELETE_EXPENSE':
-            action.type = "DONE";
-            state.expenses.map((currentExp)=> {
-                if (currentExp.name === action.payload) {
-                    budget = state.budget + currentExp.cost
-                    currentExp.cost =  0;
+        case 'RED_EXPENSE':
+            const red_expenses = state.expenses.map((currentExp)=> {
+                if (currentExp.name === action.payload.name && currentExp.cost - action.payload.cost >= 0) {
+                    currentExp.cost =  currentExp.cost - action.payload.cost;
+                    budget = state.budget + action.payload.cost
                 }
                 return currentExp
             })
             action.type = "DONE";
             return {
                 ...state,
-                budget
+                expenses: [...red_expenses],
             };
+        case 'DELETE_EXPENSE':
+        action.type = "DONE";
+        state.expenses.map((currentExp)=> {
+            if (currentExp.name === action.payload) {
+                budget = state.budget + currentExp.cost
+                currentExp.cost =  0;
+            }
+            return currentExp
+        })
+        action.type = "DONE";
+        return {
+            ...state,
+            budget
+        };
         case 'SET_BUDGET':
             action.type = "DONE";
             state.budget = action.payload;
@@ -66,7 +85,12 @@ export const AppReducer = (state, action) => {
             };
         case 'CHG_CURRENCY':
             action.type = "DONE";
-            state.currency = action.payload;
+            let choosedCurrency = CURRENCY_CONSTANT[action.payload]
+            if (!choosedCurrency) {
+                return state
+            }
+
+            state.currency = choosedCurrency;
             return {
                 ...state
             }
@@ -86,7 +110,7 @@ const initialState = {
         { id: "Human Resource", name: 'Human Resource', cost: 40 },
         { id: "IT", name: 'IT', cost: 500 },
     ],
-    currency: '£'
+    currency: CURRENCY_CONSTANT['POUND']
 };
 
 // 2. Creates the context this is the thing our components import and use to get the state
@@ -106,6 +130,10 @@ export const AppProvider = (props) => {
         remaining = state.budget - totalExpenses;
     }
 
+    const totalExpenses = state.expenses.reduce((total, item) => {
+        return total + item.cost;
+    }, 0);
+
     return (
         <AppContext.Provider
             value={{
@@ -113,7 +141,8 @@ export const AppProvider = (props) => {
                 budget: state.budget,
                 remaining: remaining,
                 dispatch,
-                currency: state.currency
+                currency: state.currency,
+                totalExpenses
             }}
         >
             {props.children}
